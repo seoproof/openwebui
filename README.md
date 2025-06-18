@@ -25,12 +25,13 @@ This tool is a Python interface for interacting with the SEOZoom API, designed t
 - **Intent Gap**: Analyze the intent gap for URLs.
 - **Project Insights**: Get lists and overviews of projects, including keywords, best pages, and potential pages.
 
-### Recommended Model
+### Recommended Models
 
 For optimal performance and compatibility with this tool, we recommend using the following model from Hugging Face:
 
-**Model**: 
+**Models**: 
 [Menlo/Jan-nano](https://huggingface.co/Menlo/Jan-nano)
+
 [bartowski/Menlo_Jan-nano-GGUF](https://huggingface.co/bartowski/Menlo_Jan-nano-GGUF)
 
 ### Settings (Valves) 
