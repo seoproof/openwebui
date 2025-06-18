@@ -130,7 +130,7 @@ class Tools:
         self,
         keyword: str,
         db: str = "it",
-        date: str = "2024-01-01",
+        date: str = "2025-06-01",
         __event_emitter__: Callable[[dict], Any] = None,
         __user__: dict = {},
     ) -> str:
@@ -168,7 +168,7 @@ class Tools:
         self,
         domain: str,
         db: str = "it",
-        date: str = "2024-01-01",
+        date: str = "2025-06-01",
         __event_emitter__: Callable[[dict], Any] = None,
         __user__: dict = {},
     ) -> str:
@@ -537,7 +537,7 @@ class IntentMapper:
                         return await function(keyword, db=db, __user__=user)
                     elif function == self.tools.get_keyword_serp_history:
                         return await function(
-                            keyword, db=db, date="2024-01-01", __user__=user
+                            keyword, db=db, date="2025-06-01", __user__=user
                         )
                     elif function == self.tools.get_keyword_related:
                         return await function(keyword, db=db, __user__=user)
@@ -555,7 +555,7 @@ class IntentMapper:
                         return await function(domain, db=db, __user__=user)
                     elif function == self.tools.get_domain_metrics_history:
                         return await function(
-                            domain, db=db, date="2024-01-01", __user__=user
+                            domain, db=db, date="2025-06-01", __user__=user
                         )
                     elif function == self.tools.get_domain_authority:
                         return await function(domain, db=db, __user__=user)
