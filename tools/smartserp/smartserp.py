@@ -5,7 +5,7 @@ description: |
   It automatically parses parameters such as SafeSearch, file type, and site restrictions in English, Italian, French, and Spanish, returning clean, structured results in Markdown—ideal for multilingual research, content discovery, and workflow automation.
 author: SEOPROOF
 author_url: https://seoproof.org
-original_git_url: https://github.com/seoproof/openwebui/smartserp
+original_git_url: https://github.com/seoproof/openwebui/
 version: 0.0.2
 license: MIT
 """
