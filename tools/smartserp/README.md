@@ -60,7 +60,7 @@ If a user does not specify a language or date restriction, the tool will use the
 
 ## Warning
 
-Google Custom Search API has a daily request quota and may incur costs depending on your usage. Monitor your API usage to avoid exceeding your quota or incurring unexpected charges[2][3].
+Google Custom Search API has a daily request quota and may incur costs depending on your usage. Monitor your API usage to avoid exceeding your quota or incurring unexpected charges.
 
 ---
 
