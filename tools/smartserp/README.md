@@ -41,19 +41,19 @@ If a user does not specify a language or date restriction, the tool will use the
 **Italiano**
 - Cerca articoli su "energia rinnovabile" con SafeSearch attivo.
 - Trova file PDF riguardanti "cambiamenti climatici".
-- Mostrami risultati solo dal sito sito example.com.
+- Mostrami risultati solo dal sito example.com.
 - Escludi il sito sito notiziefalsi.com nelle ricerche su "tecnologie verdi".
 
 **Français**
 - Recherche des articles sur "énergie renouvelable" avec SafeSearch activé.
 - Trouve des fichiers PDF concernant le "changement climatique".
-- Montre les résultats uniquement du site site example.com.
+- Montre les résultats uniquement du site example.com.
 - Exclure le site site faussesinfos.com pour la recherche sur "technologies vertes".
 
 **Español**
 - Busca artículos sobre "energía renovable" con SafeSearch activado.
 - Encuentra archivos PDF sobre "cambio climático".
-- Muestra resultados solo del sitio sitio ejemplo.com.
+- Muestra resultados solo del sitio ejemplo.com.
 - Excluir el sitio sitio noticiasfalsas.com en la búsqueda de "tecnologías verdes".
 
 ---
