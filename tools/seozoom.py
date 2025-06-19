@@ -8,7 +8,7 @@ description: |
 author: SEOPROOF
 author_url: https://seoproof.org
 original_git_url: https://github.com/seoproof/openwebui
-version: 0.0.2
+version: 0.0.3
 license: MIT
 """
 
@@ -71,21 +71,17 @@ class Tools:
     ) -> str:
         emitter = EventEmitter(__event_emitter__)
         await emitter.emit(f"Making request to SEOZoom API: {action}")
-
         if "valves" not in __user__:
             __user__["valves"] = self.Valves()
-
         api_key = __user__["valves"].SEOZOOM_API_KEY or self.valves.SEOZOOM_API_KEY
         if not api_key:
             await emitter.emit(
                 status="error", description="API key is required", done=True
             )
             return json.dumps({"error": "API key is required"})
-
         url = f"{self.valves.SEOZOOM_API_BASE_URL}/{endpoint}/"
         params["api_key"] = api_key
         params["action"] = action
-
         try:
             response = requests.get(url, params=params)
             response.raise_for_status()
@@ -130,11 +126,13 @@ class Tools:
         self,
         keyword: str,
         db: str = "it",
-        date: str = "2025-06-01",
+        date: str = None,
         __event_emitter__: Callable[[dict], Any] = None,
         __user__: dict = {},
     ) -> str:
-        params = {"db": db, "keyword": keyword, "date": date}
+        params = {"db": db, "keyword": keyword}
+        if date:
+            params["date"] = date
         return await self.seozoom_request(
             "keywords", "serphistory", params, __event_emitter__, __user__
         )
@@ -168,11 +166,13 @@ class Tools:
         self,
         domain: str,
         db: str = "it",
-        date: str = "2025-06-01",
+        date: str = None,
         __event_emitter__: Callable[[dict], Any] = None,
         __user__: dict = {},
     ) -> str:
-        params = {"db": db, "domain": domain, "date": date}
+        params = {"db": db, "domain": domain}
+        if date:
+            params["date"] = date
         return await self.seozoom_request(
             "domains", "metricshistory", params, __event_emitter__, __user__
         )
@@ -412,9 +412,9 @@ class IntentMapper:
                 self.tools.get_keyword_serp,
                 (m.group(1), m.group(2)),
             ),
-            r".*storico SERP per la parola chiave (.*)(?: per il database| in) (.*)": lambda m: (
+            r".*storico SERP per la parola chiave (.*)(?: per il database| in) (.*) (?:il|al|del) (\d{4}-\d{2}-\d{2})": lambda m: (
                 self.tools.get_keyword_serp_history,
-                (m.group(1), m.group(2)),
+                (m.group(1), m.group(2), m.group(3)),
             ),
             r".*parole chiave correlate per (.*)(?: per il database| in) (.*)": lambda m: (
                 self.tools.get_keyword_related,
@@ -424,9 +424,9 @@ class IntentMapper:
                 self.tools.get_domain_metrics,
                 (m.group(1), m.group(2)),
             ),
-            r".*storico metriche per il dominio (.*)(?: per il database| in) (.*)": lambda m: (
+            r".*storico metriche per il dominio (.*)(?: per il database| in) (.*) (?:il|al|del) (\d{4}-\d{2}-\d{2})": lambda m: (
                 self.tools.get_domain_metrics_history,
-                (m.group(1), m.group(2)),
+                (m.group(1), m.group(2), m.group(3)),
             ),
             r".*autorità per il dominio (.*)(?: per il database| in) (.*)": lambda m: (
                 self.tools.get_domain_authority,
@@ -497,7 +497,6 @@ class IntentMapper:
                 (m.group(1), m.group(2)),
             ),
         }
-
         self.db_map = {
             "uk": "uk",
             "regno unito": "uk",
@@ -520,9 +519,13 @@ class IntentMapper:
                 if len(args) == 1:
                     db = "it"
                     args = (args[0], db)
-                else:
+                elif len(args) == 2:
                     db = self.db_map.get(args[-1].lower(), "it")
                     args = args[:-1] + (db,)
+                elif len(args) == 3:
+                    db = self.db_map.get(args[-2].lower(), "it")
+                    date = args[-1]
+                    args = args[:-2] + (db, date)
 
                 if function in [
                     self.tools.get_keyword_metrics,
@@ -530,16 +533,17 @@ class IntentMapper:
                     self.tools.get_keyword_serp_history,
                     self.tools.get_keyword_related,
                 ]:
-                    keyword, db = args
                     if function == self.tools.get_keyword_metrics:
+                        keyword, db = args
                         return await function(keyword, db=db, __user__=user)
                     elif function == self.tools.get_keyword_serp:
+                        keyword, db = args
                         return await function(keyword, db=db, __user__=user)
                     elif function == self.tools.get_keyword_serp_history:
-                        return await function(
-                            keyword, db=db, date="2025-06-01", __user__=user
-                        )
+                        keyword, db, date = args
+                        return await function(keyword, db=db, date=date, __user__=user)
                     elif function == self.tools.get_keyword_related:
+                        keyword, db = args
                         return await function(keyword, db=db, __user__=user)
                 elif function in [
                     self.tools.get_domain_metrics,
@@ -550,22 +554,26 @@ class IntentMapper:
                     self.tools.get_domain_keywords,
                     self.tools.get_domain_competitor,
                 ]:
-                    domain, db = args
                     if function == self.tools.get_domain_metrics:
+                        domain, db = args
                         return await function(domain, db=db, __user__=user)
                     elif function == self.tools.get_domain_metrics_history:
-                        return await function(
-                            domain, db=db, date="2025-06-01", __user__=user
-                        )
+                        domain, db, date = args
+                        return await function(domain, db=db, date=date, __user__=user)
                     elif function == self.tools.get_domain_authority:
+                        domain, db = args
                         return await function(domain, db=db, __user__=user)
                     elif function == self.tools.get_domain_niches:
+                        domain, db = args
                         return await function(domain, db=db, __user__=user)
                     elif function == self.tools.get_domain_best_pages:
+                        domain, db = args
                         return await function(domain, db=db, __user__=user)
                     elif function == self.tools.get_domain_keywords:
+                        domain, db = args
                         return await function(domain, db=db, __user__=user)
                     elif function == self.tools.get_domain_competitor:
+                        domain, db = args
                         return await function(domain, db=db, __user__=user)
                 elif function in [
                     self.tools.get_url_page_zoom_authority,
@@ -616,14 +624,13 @@ async def main():
     tools = Tools()
     user = {"valves": {"SEOZOOM_API_KEY": "la_tua_chiave_api_seozoom"}}
     intent_mapper = IntentMapper(tools)
-
     prompts = [
         "Mostrami le metriche per la parola chiave seo",
         "Mostrami i risultati SERP per la parola chiave digital marketing per il database fr",
-        "Mostrami lo storico SERP per la parola chiave digital marketing in uk",
+        "Mostrami lo storico SERP per la parola chiave digital marketing in uk il 2025-06-01",
         "Mostrami le parole chiave correlate per smartphone per il database de",
         "Mostrami le metriche per il dominio example.com",
-        "Mostrami lo storico metriche per il dominio example.com per il database fr",
+        "Mostrami lo storico metriche per il dominio example.com per il database fr il 2025-06-01",
         "Mostrami l'autorità per il dominio example.com",
         "Mostrami le nicchie per il dominio example.com per il database uk",
         "Mostrami le migliori pagine per il dominio example.com in de",
@@ -642,7 +649,6 @@ async def main():
         "Mostrami le pagine vincenti per il progetto <NOME PROGETTO> per il database it",
         "Mostrami le pagine perdenti per il progetto <NOME PROGETTO> in fr",
     ]
-
     for prompt in prompts:
         result = await intent_mapper.interpret_and_execute(prompt, user)
         print(f"Prompt: {prompt}\nResult: {result}\n")
