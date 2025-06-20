@@ -1,19 +1,20 @@
 """
 title: SmartSERP
 description: |
-  SmartSERP is a Python tool that delivers real-time Google SERP results based on your query, supporting advanced search customization through natural language prompts.
-  It automatically parses parameters such as SafeSearch, file type, and site restrictions in English, Italian, French, and Spanish, returning clean, structured results in Markdown—ideal for multilingual research, content discovery, and workflow automation.
+  SmartSERP is a Python tool that delivers real-time Google SERP results based on your query, supporting advanced search customization through natural language prompts. 
+  It automatically parses parameters such as SafeSearch, file type, site restrictions, and date filters from prompts in English, Italian, French, and Spanish, returning clean, localized, and structured results in Markdown—ideal for multilingual research, content discovery, and workflow automation.
 author: SEOPROOF
 author_url: https://seoproof.org
-original_git_url: https://github.com/seoproof/openwebui/
-version: 0.0.2
+original_git_url: https://github.com/seoproof/openwebui
+version: 0.0.3
 license: MIT
 """
 
 from pydantic import BaseModel, Field
 from googleapiclient.discovery import build
-from typing import Callable, Any, Optional, Dict
+from typing import Callable, Any, Optional, Dict, Tuple
 import re
+from datetime import datetime
 
 
 class EventEmitter:
@@ -45,56 +46,108 @@ class EventEmitter:
 
 class Tools:
     class Valves(BaseModel):
-        google_api_key: str = Field(
-            "", description="Global Google API key for the tool"
-        )
-        custom_search_engine_id: str = Field(
-            "", description="Global Custom Search Engine ID for the tool"
-        )
-        max_results: int = Field(
-            10, description="Maximum number of results to return (1-10)", ge=1, le=10
-        )
+        google_api_key: str = Field("", description="Google API key")
+        custom_search_engine_id: str = Field("", description="Custom Search Engine ID")
+        max_results: int = Field(10, ge=1, le=10, description="Max results (1-10)")
         language: Optional[str] = Field(
-            "en",
-            description="Language code for search results (e.g., 'en', 'it', 'es', 'fr')",
-            min_length=2,
-            max_length=5,
+            "en", min_length=2, max_length=5, description="Language code"
         )
         date_restrict: Optional[str] = Field(
-            None,
-            description="Restrict results to a time period (e.g., 'd1', 'w1', 'm1', 'y1')",
+            None, description="Date restriction (d1,w1,m1,y1)"
         )
 
     class UserValves(BaseModel):
-        google_api_key: str = Field(
-            "", description="Personal Google API key (optional)"
-        )
+        google_api_key: str = Field("", description="User Google API key")
         custom_search_engine_id: str = Field(
-            "", description="Personal Custom Search Engine ID (optional)"
+            "", description="User Custom Search Engine ID"
         )
         max_results: Optional[int] = Field(
-            None,
-            description="Maximum number of results to return (optional, 1-10)",
-            ge=1,
-            le=10,
+            None, ge=1, le=10, description="Max results user"
         )
         language: Optional[str] = Field(
-            None,
-            description="Language code for search results (optional)",
-            min_length=2,
-            max_length=5,
+            None, min_length=2, max_length=5, description="Language code user"
         )
-        date_restrict: Optional[str] = Field(
-            None, description="Restrict results to a time period (optional)"
-        )
+        date_restrict: Optional[str] = Field(None, description="Date restriction user")
+
+    translations = {
+        "en": {
+            "results_for": "## Search results for: *{query}*\n",
+            "no_results": "No results found for the query.",
+            "error_empty_query": "Search query cannot be empty.",
+            "error_api_key": "Google API key is not configured or invalid.",
+            "error_cse_id": "Custom Search Engine ID is not configured.",
+            "search_start": "Starting search on Google...",
+            "search_success": "Search completed successfully.",
+            "search_no_items": "No results found.",
+            "separator": "---\n",
+            "publish_date": "Publication date",
+        },
+        "it": {
+            "results_for": "## Risultati ricerca per: *{query}*\n",
+            "no_results": "Nessun risultato trovato per la query.",
+            "error_empty_query": "La query di ricerca non può essere vuota.",
+            "error_api_key": "La chiave API Google non è configurata o non valida.",
+            "error_cse_id": "L'ID Custom Search Engine non è configurato.",
+            "search_start": "Avvio ricerca su Google...",
+            "search_success": "Ricerca completata con successo.",
+            "search_no_items": "Nessun risultato trovato.",
+            "separator": "---\n",
+            "publish_date": "Data pubblicazione",
+        },
+        "fr": {
+            "results_for": "## Résultats de recherche pour : *{query}*\n",
+            "no_results": "Aucun résultat trouvé pour la requête.",
+            "error_empty_query": "La requête de recherche ne peut pas être vide.",
+            "error_api_key": "La clé API Google n'est pas configurée ou invalide.",
+            "error_cse_id": "L'ID du moteur de recherche personnalisé n'est pas configuré.",
+            "search_start": "Démarrage de la recherche sur Google...",
+            "search_success": "Recherche terminée avec succès.",
+            "search_no_items": "Aucun résultat trouvé.",
+            "separator": "---\n",
+            "publish_date": "Date de publication",
+        },
+        "es": {
+            "results_for": "## Resultados de búsqueda para: *{query}*\n",
+            "no_results": "No se encontraron resultados para la consulta.",
+            "error_empty_query": "La consulta de búsqueda no puede estar vacía.",
+            "error_api_key": "La clave API de Google no está configurada o es inválida.",
+            "error_cse_id": "El ID del motor de búsqueda personalizado no está configurado.",
+            "search_start": "Iniciando búsqueda en Google...",
+            "search_success": "Búsqueda completada con éxito.",
+            "search_no_items": "No se encontraron resultados.",
+            "separator": "---\n",
+            "publish_date": "Fecha de publicación",
+        },
+    }
 
     def __init__(self):
         self.valves = self.Valves()
 
-    def parse_extra_params_from_prompt(self, prompt: str) -> Dict[str, Any]:
+    def parse_extra_params_from_prompt(self, prompt: str) -> Tuple[Dict[str, Any], str]:
         params = {}
+        cleaned_prompt = prompt
 
-        safe_search_patterns = [
+        def remove_pattern(text, pattern):
+            return re.sub(pattern, "", text, flags=re.I).strip()
+
+        # File types multilingue
+        file_type_patterns = {
+            r"\bpdf\b": "pdf",
+            r"\bdocx?\b": "docx",
+            r"\bpptx?\b": "pptx",
+            r"\bxlsx?\b": "xlsx",
+            r"\btxt\b": "txt",
+            r"\bcsv\b": "csv",
+            r"\bhtml?\b": "html",
+        }
+        for pat, val in file_type_patterns.items():
+            if re.search(pat, cleaned_prompt, re.I):
+                params["fileType"] = val
+                cleaned_prompt = remove_pattern(cleaned_prompt, pat)
+                break
+
+        # SafeSearch on/off multilingue
+        safe_on = [
             r"safe\s*search\s*on",
             r"safe\s*mode",
             r"filtra contenuti espliciti",
@@ -102,8 +155,10 @@ class Tools:
             r"filtrer contenu explicite",
             r"contenido explícito",
             r"filtrar contenido explícito",
+            r"contenuti sicuri",
+            r"contenuto adatto a tutti",
         ]
-        safe_search_off_patterns = [
+        safe_off = [
             r"safe\s*search\s*off",
             r"no safe\s*search",
             r"no filter explicit content",
@@ -112,21 +167,61 @@ class Tools:
             r"sans filtre contenu explicite",
             r"sin filtro contenido explícito",
             r"sin contenido explícito",
+            r"contenuti espliciti",
         ]
-
-        if any(re.search(pat, prompt, re.I) for pat in safe_search_patterns):
-            params["safe"] = "active"
-        elif any(re.search(pat, prompt, re.I) for pat in safe_search_off_patterns):
+        if any(re.search(p, cleaned_prompt, re.I) for p in safe_on):
+            params["safe"] = "high"
+            for p in safe_on:
+                cleaned_prompt = remove_pattern(cleaned_prompt, p)
+        elif any(re.search(p, cleaned_prompt, re.I) for p in safe_off):
             params["safe"] = "off"
+            for p in safe_off:
+                cleaned_prompt = remove_pattern(cleaned_prompt, p)
 
-        if m := re.search(r"\bfile\s+(pdf|docx?|pptx?|xlsx?)\b", prompt, re.I):
-            params["fileType"] = m.group(1).lower()
+        # Tipo contenuto (solo 'image' è supportato da Google Custom Search API)
+        content_types = {
+            r"\bimmagini\b": "image",
+            r"\bimages?\b": "image",
+        }
+        for pat, val in content_types.items():
+            if re.search(pat, cleaned_prompt, re.I):
+                params["searchType"] = val
+                cleaned_prompt = remove_pattern(cleaned_prompt, pat)
+                break
 
-        site_pattern = r"\b(sito|site|site web|sitio)\s+([^\s]+)"
-        m = re.search(site_pattern, prompt, re.I)
+        # Restrizioni temporali multilingue
+        date_patterns = {
+            r"ultimi?\s*(\d+)\s*giorni": lambda m: f"d{m.group(1)}",
+            r"ultimo\s*mese": lambda m: "m1",
+            r"ultima\s*settimana": lambda m: "w1",
+            r"ultimo\s*anno": lambda m: "y1",
+            r"last\s*(\d+)\s*days": lambda m: f"d{m.group(1)}",
+            r"last\s*month": lambda m: "m1",
+            r"last\s*week": lambda m: "w1",
+            r"last\s*year": lambda m: "y1",
+            r"derniers?\s*(\d+)\s*jours": lambda m: f"d{m.group(1)}",
+            r"dernier\s*moi[sé]": lambda m: "m1",
+            r"derni[èe]re\s*semaine": lambda m: "w1",
+            r"derni[èe]re\s*ann[ée]e": lambda m: "y1",
+            r"ultimos?\s*(\d+)\s*d[ií]as": lambda m: f"d{m.group(1)}",
+            r"ultimo\s*mes": lambda m: "m1",
+            r"ultima\s*semana": lambda m: "w1",
+            r"ultimo\s*a[oó]o": lambda m: "y1",
+        }
+        for pat, func in date_patterns.items():
+            m = re.search(pat, cleaned_prompt, re.I)
+            if m:
+                params["dateRestrict"] = func(m)
+                cleaned_prompt = remove_pattern(cleaned_prompt, pat)
+                break
+
+        # Parsing sito con inclusione/esclusione
+        site_pat = r"\b(sito|site|site web|sitio)\s+([^\s]+)"
+        m = re.search(site_pat, cleaned_prompt, re.I)
         if m:
             params["siteSearch"] = m.group(2)
-            exclude_patterns = [
+            cleaned_prompt = remove_pattern(cleaned_prompt, site_pat)
+            exclude_pat = [
                 r"\bescludi sito\b",
                 r"\bescludi\b",
                 r"\bexclude site\b",
@@ -136,26 +231,34 @@ class Tools:
                 r"\bexcluir sitio\b",
                 r"\bexcluir\b",
             ]
-            if any(re.search(pat, prompt, re.I) for pat in exclude_patterns):
+            if any(re.search(p, cleaned_prompt, re.I) for p in exclude_pat):
                 params["siteSearchFilter"] = "i"
+                for p in exclude_pat:
+                    cleaned_prompt = remove_pattern(cleaned_prompt, p)
             else:
                 params["siteSearchFilter"] = "e"
 
-        return params
+        cleaned_prompt = re.sub(r"\s+", " ", cleaned_prompt).strip()
+        return params, cleaned_prompt
 
     async def run(
         self,
         query: str,
         num_results: Optional[int] = None,
         prompt: Optional[str] = None,
+        output_format: str = "markdown",
         __event_emitter__: Callable[[dict], Any] = None,
         __user__: Dict[str, Any] = {},
     ) -> str:
         emitter = EventEmitter(__event_emitter__)
+        lang = (
+            __user__.get("valves", {}).language or self.valves.language or "en"
+        ).lower()
+        t = self.translations.get(lang, self.translations["en"])
 
         if not query or not query.strip():
-            await emitter.error_update("Search query cannot be empty.")
-            return "Error: Search query cannot be empty."
+            await emitter.error_update(t["error_empty_query"])
+            return f"Error: {t['error_empty_query']}"
 
         if "valves" not in __user__:
             __user__["valves"] = self.UserValves()
@@ -188,58 +291,103 @@ class Tools:
         n_results = min(num_results if num_results is not None else max_res, 10)
 
         if not api_key:
-            await emitter.error_update("Google API key is not configured.")
-            return "Error: Google API key is not configured."
+            await emitter.error_update(t["error_api_key"])
+            return f"Error: {t['error_api_key']}"
         if not cse_id:
-            await emitter.error_update("Custom Search Engine ID is not configured.")
-            return "Error: Custom Search Engine ID is not configured."
+            await emitter.error_update(t["error_cse_id"])
+            return f"Error: {t['error_cse_id']}"
 
         extra_params = {}
-        if prompt:
-            extra_params = self.parse_extra_params_from_prompt(prompt)
+        base_prompt = prompt if prompt else query
+        extra_params, core_query = self.parse_extra_params_from_prompt(base_prompt)
+
+        file_type = extra_params.pop("fileType", None)
+        if file_type:
+            core_query += f" filetype:{file_type}"
+
+        final_query = core_query.strip() if core_query.strip() else query.strip()
+        final_query = re.sub(r"\s+filetype:\w+", "", final_query, flags=re.I).strip()
+        if file_type and f"filetype:{file_type}" not in final_query:
+            final_query += f" filetype:{file_type}"
 
         try:
-            await emitter.progress_update("Starting search on Google...")
-
+            await emitter.progress_update(t["search_start"])
             service = build("customsearch", "v1", developerKey=api_key)
-
             search_params = {
-                "q": query,
+                "q": final_query,
                 "cx": cse_id,
                 "num": n_results,
             }
-
             if language:
                 search_params["lr"] = f"lang_{language.lower()}"
-
-            if date_restrict:
+            # Applichiamo la restrizione temporale da valves solo se non presente in extra_params
+            if "dateRestrict" not in extra_params and date_restrict:
                 search_params["dateRestrict"] = date_restrict
-
             for k, v in extra_params.items():
-                search_params[k] = v
-
-            await emitter.progress_update(f"Retrieving up to {n_results} results...")
+                # Applichiamo solo searchType se è "image"
+                if k == "searchType":
+                    if v == "image":
+                        search_params[k] = v
+                    # Ignoriamo altri valori per evitare errori API
+                else:
+                    search_params[k] = v
 
             res = service.cse().list(**search_params).execute()
 
             if "items" not in res:
-                await emitter.success_update("No results found.")
-                return "No results found for the query."
+                await emitter.success_update(t["search_no_items"])
+                return t["no_results"]
 
-            output_lines = [f"## Search results for: *{query}*\n"]
-            for i, item in enumerate(res["items"], 1):
-                title = item.get("title", "No title").replace("{", "").replace("}", "")
-                link = item.get("link", "No link")
-                snippet = item.get("snippet", "").replace("{", "").replace("}", "")
-                output_lines.append(f"### {i}. [{title}]({link})")
-                if snippet:
-                    output_lines.append(f"> {snippet}")
-                output_lines.append(f"[Link]({link})\n")
+            if output_format == "json":
+                import json
 
-            output = "\n".join(output_lines)
+                results = [
+                    {
+                        "title": item.get("title", ""),
+                        "link": item.get("link", ""),
+                        "snippet": item.get("snippet", ""),
+                        "displayLink": item.get("displayLink", ""),
+                        "formattedUrl": item.get("formattedUrl", ""),
+                        "pagemap": item.get("pagemap", {}),
+                    }
+                    for item in res["items"]
+                ]
+                summary = {
+                    "query": final_query,
+                    "num_results": len(results),
+                    "language": language,
+                    "filters": extra_params,
+                    "results": results,
+                }
+                await emitter.success_update(t["search_success"])
+                return json.dumps(summary, indent=2, ensure_ascii=False)
 
-            await emitter.success_update("Search completed successfully.")
-            return output
+            else:
+
+                def highlight(text, query):
+                    words = re.findall(r"\b\w+\b", query)
+                    for w in words:
+                        text = re.sub(
+                            r"\b" + re.escape(w) + r"\b", f"**{w}**", text, flags=re.I
+                        )
+                    return text
+
+                output_lines = [t["results_for"].format(query=final_query)]
+                for i, item in enumerate(res["items"], 1):
+                    title = (
+                        item.get("title", "No title").replace("{", "").replace("}", "")
+                    )
+                    link = item.get("link", "No link")
+                    snippet = item.get("snippet", "").replace("{", "").replace("}", "")
+                    snippet = highlight(snippet, query)
+                    output_lines.append(f"### {i}. [{title}]({link})")
+                    if snippet:
+                        output_lines.append(f"> {snippet}")
+                    output_lines.append(f"[Link]({link})\n")
+                    output_lines.append(t["separator"])
+
+                await emitter.success_update(t["search_success"])
+                return "\n".join(output_lines)
 
         except Exception as e:
             error_msg = f"Error during search: {str(e)}"
