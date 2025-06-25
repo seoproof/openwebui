@@ -95,7 +95,10 @@ Google Custom Search API has a daily request quota and may incur costs depending
 
 For optimal performance and compatibility with this tool, we recommend using the following model from Hugging Face:
 
-- [Menlo/Jan-nano](https://huggingface.co/Menlo/Jan-nano)  
+**Model**:
+- [Menlo/Jan-nano-128k](https://huggingface.co/Menlo/Jan-nano-128k) 
+- [bartowski/Menlo_Jan-nano-128k-GGUF](https://huggingface.co/bartowski/Menlo_Jan-nano-128k-GGUF)
+- [Menlo/Jan-nano](https://huggingface.co/Menlo/Jan-nano) 
 - [bartowski/Menlo_Jan-nano-GGUF](https://huggingface.co/bartowski/Menlo_Jan-nano-GGUF)
 
 ---
