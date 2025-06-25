@@ -1,12 +1,12 @@
 """
 title: SmartSERP
 description: |
-  SmartSERP is a Python tool that delivers real-time Google SERP results based on your query, supporting advanced search customization through natural language prompts. 
-  It automatically parses parameters such as SafeSearch, file type, site restrictions, and date filters from prompts in English, Italian, French, and Spanish, returning clean, localized, and structured results in Markdown—ideal for multilingual research, content discovery, and workflow automation.
+  SmartSERP is a Python tool that delivers real-time Google SERP results based on your query, supporting advanced search customization through natural language prompts.
+  It automatically parses parameters such as SafeSearch, file type, and site restrictions in English, Italian, French, and Spanish, returning clean, structured results in Markdown—ideal for multilingual research, content discovery, and workflow automation.
 author: SEOPROOF
 author_url: https://seoproof.org
 original_git_url: https://github.com/seoproof/openwebui
-version: 0.0.3
+version: 0.0.4
 license: MIT
 """
 
@@ -14,7 +14,6 @@ from pydantic import BaseModel, Field
 from googleapiclient.discovery import build
 from typing import Callable, Any, Optional, Dict, Tuple
 import re
-from datetime import datetime
 
 
 class EventEmitter:
@@ -80,7 +79,6 @@ class Tools:
             "search_success": "Search completed successfully.",
             "search_no_items": "No results found.",
             "separator": "---\n",
-            "publish_date": "Publication date",
         },
         "it": {
             "results_for": "## Risultati ricerca per: *{query}*\n",
@@ -92,7 +90,6 @@ class Tools:
             "search_success": "Ricerca completata con successo.",
             "search_no_items": "Nessun risultato trovato.",
             "separator": "---\n",
-            "publish_date": "Data pubblicazione",
         },
         "fr": {
             "results_for": "## Résultats de recherche pour : *{query}*\n",
@@ -104,7 +101,6 @@ class Tools:
             "search_success": "Recherche terminée avec succès.",
             "search_no_items": "Aucun résultat trouvé.",
             "separator": "---\n",
-            "publish_date": "Date de publication",
         },
         "es": {
             "results_for": "## Resultados de búsqueda para: *{query}*\n",
@@ -116,7 +112,6 @@ class Tools:
             "search_success": "Búsqueda completada con éxito.",
             "search_no_items": "No se encontraron resultados.",
             "separator": "---\n",
-            "publish_date": "Fecha de publicación",
         },
     }
 
@@ -130,7 +125,6 @@ class Tools:
         def remove_pattern(text, pattern):
             return re.sub(pattern, "", text, flags=re.I).strip()
 
-        # File types multilingue
         file_type_patterns = {
             r"\bpdf\b": "pdf",
             r"\bdocx?\b": "docx",
@@ -146,7 +140,6 @@ class Tools:
                 cleaned_prompt = remove_pattern(cleaned_prompt, pat)
                 break
 
-        # SafeSearch on/off multilingue
         safe_on = [
             r"safe\s*search\s*on",
             r"safe\s*mode",
@@ -178,7 +171,6 @@ class Tools:
             for p in safe_off:
                 cleaned_prompt = remove_pattern(cleaned_prompt, p)
 
-        # Tipo contenuto (solo 'image' è supportato da Google Custom Search API)
         content_types = {
             r"\bimmagini\b": "image",
             r"\bimages?\b": "image",
@@ -189,7 +181,6 @@ class Tools:
                 cleaned_prompt = remove_pattern(cleaned_prompt, pat)
                 break
 
-        # Restrizioni temporali multilingue
         date_patterns = {
             r"ultimi?\s*(\d+)\s*giorni": lambda m: f"d{m.group(1)}",
             r"ultimo\s*mese": lambda m: "m1",
@@ -215,7 +206,6 @@ class Tools:
                 cleaned_prompt = remove_pattern(cleaned_prompt, pat)
                 break
 
-        # Parsing sito con inclusione/esclusione
         site_pat = r"\b(sito|site|site web|sitio)\s+([^\s]+)"
         m = re.search(site_pat, cleaned_prompt, re.I)
         if m:
@@ -320,15 +310,13 @@ class Tools:
             }
             if language:
                 search_params["lr"] = f"lang_{language.lower()}"
-            # Applichiamo la restrizione temporale da valves solo se non presente in extra_params
             if "dateRestrict" not in extra_params and date_restrict:
                 search_params["dateRestrict"] = date_restrict
+
             for k, v in extra_params.items():
-                # Applichiamo solo searchType se è "image"
                 if k == "searchType":
                     if v == "image":
                         search_params[k] = v
-                    # Ignoriamo altri valori per evitare errori API
                 else:
                     search_params[k] = v
 
@@ -361,7 +349,6 @@ class Tools:
                 }
                 await emitter.success_update(t["search_success"])
                 return json.dumps(summary, indent=2, ensure_ascii=False)
-
             else:
 
                 def highlight(text, query):
@@ -373,6 +360,7 @@ class Tools:
                     return text
 
                 output_lines = [t["results_for"].format(query=final_query)]
+
                 for i, item in enumerate(res["items"], 1):
                     title = (
                         item.get("title", "No title").replace("{", "").replace("}", "")
@@ -380,10 +368,11 @@ class Tools:
                     link = item.get("link", "No link")
                     snippet = item.get("snippet", "").replace("{", "").replace("}", "")
                     snippet = highlight(snippet, query)
-                    output_lines.append(f"### {i}. [{title}]({link})")
-                    if snippet:
-                        output_lines.append(f"> {snippet}")
-                    output_lines.append(f"[Link]({link})\n")
+
+                    output_lines.append(f"### Result {i}")
+                    output_lines.append(f"[{title}]({link})")
+                    output_lines.append(f"{snippet}")
+                    output_lines.append(f"{link}")
                     output_lines.append(t["separator"])
 
                 await emitter.success_update(t["search_success"])
