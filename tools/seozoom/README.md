@@ -33,7 +33,7 @@ The SERP History (serphistory) functionality uses a significant number of credit
 
 For optimal performance and compatibility with this tool, we recommend using the following model from Hugging Face:
 
-**Model**:
+**Models**:
 - [Menlo/Jan-nano-128k](https://huggingface.co/Menlo/Jan-nano-128k) 
 - [bartowski/Menlo_Jan-nano-128k-GGUF](https://huggingface.co/bartowski/Menlo_Jan-nano-128k-GGUF)
 - [Menlo/Jan-nano](https://huggingface.co/Menlo/Jan-nano) 
