@@ -54,8 +54,8 @@ If a user does not specify a language or date restriction in the prompt, the too
 ### English
 - `Search for "artificial intelligence" with safe search on.`
 - `Find PDF files about "climate change".`
-- `Show results only from site example.com.`
-- `Exclude site fake-news.com in search for "green technology".`
+- `Show results only from site "example.com".`
+- `Exclude site "fake-news.com" in search for "green technology".`
 - `Find images of cute cats with safe search off.`
 - `Latest news about "space exploration" published last month.` *(Note: news queries run as web search)*
 
@@ -63,23 +63,23 @@ If a user does not specify a language or date restriction in the prompt, the too
 - `Cerca articoli su "energia rinnovabile" con SafeSearch attivo.`
 - `Trova file PDF riguardanti "cambiamenti climatici".`
 - `Mostrami risultati solo dal sito example.com.`
-- `Escludi il sito notiziefalsi.com nelle ricerche su "tecnologie verdi".`
+- `Escludi il sito "notiziefalse.com" nelle ricerche su "tecnologie verdi".`
 - `Cerca immagini di gatti divertenti senza filtro contenuti espliciti.`
-- `Notizie dal sito ansa.it sugli eventi politici italiani dell'ultima settimana.` *(Nota: le ricerche notizie sono eseguite come ricerca web)*
+- `Notizie dal sito "ansa.it" sugli eventi politici italiani dell'ultima settimana.` *(Nota: le ricerche notizie sono eseguite come ricerca web)*
 
 ### Français
 - `Recherche des articles sur "énergie renouvelable" avec SafeSearch activé.`
 - `Trouve des fichiers PDF concernant le "changement climatique".`
 - `Montre les résultats uniquement du site example.com.`
-- `Exclure le site faussesinfos.com pour la recherche sur "technologies vertes".`
+- `Exclure le site "faussesinfos.com" pour la recherche sur "technologies vertes".`
 - `Cherche des images de chats mignons sans filtre contenu explicite.`
 - `Dernières nouvelles sur "exploration spatiale" publiées le mois dernier.` *(Note : les recherches de news sont des recherches web)*
 
 ### Español
 - `Busca artículos sobre "energía renovable" con SafeSearch activado.`
 - `Encuentra archivos PDF sobre "cambio climático".`
-- `Muestra resultados solo del sitio ejemplo.com.`
-- `Excluir el sitio noticiasfalsas.com en la búsqueda de "tecnologías verdes".`
+- `Muestra resultados solo del sitio "ejemplo.com".`
+- `Excluir el sitio "noticiasfalsas.com" en la búsqueda de "tecnologías verdes".`
 - `Busca imágenes de gatos divertidos sin filtro contenido explícito.`
 - `Últimas noticias sobre "exploración espacial" publicadas el mes pasado.` *(Nota: las búsquedas de noticias se realizan como búsqueda web)*
 
@@ -95,7 +95,7 @@ Google Custom Search API has a daily request quota and may incur costs depending
 
 For optimal performance and compatibility with this tool, we recommend using the following model from Hugging Face:
 
-**Model**:
+**Models**:
 - [Menlo/Jan-nano-128k](https://huggingface.co/Menlo/Jan-nano-128k) 
 - [bartowski/Menlo_Jan-nano-128k-GGUF](https://huggingface.co/bartowski/Menlo_Jan-nano-128k-GGUF)
 - [Menlo/Jan-nano](https://huggingface.co/Menlo/Jan-nano) 
